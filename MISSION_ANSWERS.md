@@ -56,7 +56,7 @@
 ## Part 3: Cloud Deployment
 
 ### Exercise 3.1: Railway deployment
-- **Public URL**: `https://production-ai-agent.railway.app` (simulated URL)
+- **Public URL**: https://day122a202600728buituanminh-production.up.railway.app
 - **Config comparison (`railway.toml` vs `render.yaml`)**:
   - `railway.toml` is a platform-specific build and deploy instruction sheet for the Railway CLI. It defines properties like the builder to use (DOCKERFILE) and startup settings.
   - `render.yaml` is a declarative Render Blueprint spec. It describes not just service deployments but also multi-tier infrastructure configurations (like provisioning Redis side-by-side with web services) directly from Git.

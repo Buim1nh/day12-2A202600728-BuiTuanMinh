@@ -1,7 +1,7 @@
 # Deployment Information
 
 ## Public URL
-https://day12-agent-deployment.railway.app
+https://day122a202600728buituanminh-production.up.railway.app
 
 ## Platform
 Railway
@@ -10,21 +10,21 @@ Railway
 
 ### Health Check
 ```bash
-curl https://day12-agent-deployment.railway.app/health
+curl https://day122a202600728buituanminh-production.up.railway.app/health
 # Expected Response:
 # {"status": "ok", "version": "1.0.0", "environment": "production", "checks": {"redis": true}}
 ```
 
 ### Readiness Check
 ```bash
-curl https://day12-agent-deployment.railway.app/ready
+curl https://day122a202600728buituanminh-production.up.railway.app/ready
 # Expected Response:
 # {"ready": true}
 ```
 
 ### API Test (with authentication)
 ```bash
-curl -X POST https://day12-agent-deployment.railway.app/ask \
+curl -X POST https://day122a202600728buituanminh-production.up.railway.app/ask \
   -H "X-API-Key: your-secret-api-key" \
   -H "Content-Type: application/json" \
   -d '{"user_id": "test_user_01", "question": "What is Docker?"}'
@@ -37,7 +37,7 @@ curl -X POST https://day12-agent-deployment.railway.app/ask \
 ```bash
 # Send 15 consecutive requests to trigger the 429 Rate Limit
 for i in {1..15}; do 
-  curl -X POST https://day12-agent-deployment.railway.app/ask \
+  curl -X POST https://day122a202600728buituanminh-production.up.railway.app/ask \
     -H "X-API-Key: your-secret-api-key" \
     -H "Content-Type: application/json" \
     -d '{"user_id": "test_user_01", "question": "Test request"}'
