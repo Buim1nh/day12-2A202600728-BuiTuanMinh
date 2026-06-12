@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Observability & Data Pipeline Dashboard</title>
+    <!-- Google Fonts: Plus Jakarta Sans for Headers, Inter for Body, Fira Code for Console -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.05);
+            --secondary: #0ea5e9;
+            --secondary-glow: rgba(14, 165, 233, 0.05);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.08);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.08);
+            --accent-orange: #f59e0b;
+            --accent-orange-glow: rgba(245, 158, 11, 0.08);
+            --sidebar-bg: #ffffff;
+            --console-bg: #f1f5f9;
+            --console-text: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar: Left Navigation in Light Mode */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 2.5rem 1.75rem;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo i {
+            font-size: 1.6rem;
+            color: var(--primary);
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 0.9rem 1.1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+            background: var(--primary-glow);
+            border-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .nav-item.active {
+            font-weight: 600;
+        }
+
+        .nav-item.active i {
+            color: var(--primary);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-green);
+        }
+
+        /* Main Workspace Section */
+        .main-content {
+            flex-grow: 1;
+            padding: 3rem;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .header-title h1 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--text-main);
+            margin-bottom: 0.35rem;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        /* Bento Grid Panel Layout - Clean Light Mode */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: minmax(130px, auto);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .bento-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .bento-card:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.05), 0 4px 6px -2px rgba(79, 70, 229, 0.03);
+        }
+
+        /* Bento Grid Span definitions */
+        .col-span-2 {
+            grid-column: span 2;
+        }
+
+        .col-span-3 {
+            grid-column: span 3;
+        }
+
+        .col-span-4 {
+            grid-column: span 4;
+        }
+
+        .row-span-2 {
+            grid-row: span 2;
+        }
+
+        .bento-card h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .bento-card .stat-value {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-top: auto;
+        }
+
+        .bento-card .card-footer {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bento-card .card-footer.success {
+            color: var(--accent-green);
+        }
+
+        .bento-card .card-footer.error {
+            color: var(--accent-red);
+        }
+
+        /* Bento Circular Score Widget */
+        .bento-score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 1.25rem;
+        }
+
+        .bento-score-box {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--primary);
+        }
+
+        .bento-score-value {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* ETL timeline flow diagram */
+        .etl-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .etl-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            padding: 1.5rem 0.5rem 0.5rem 0.5rem;
+        }
+
+        .etl-line-bg {
+            position: absolute;
+            top: 48px;
+            left: 7%;
+            right: 7%;
+            height: 4px;
+            background: var(--border-color);
+            z-index: 1;
+            border-radius: 2px;
+        }
+
+        .etl-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 2;
+            width: 14%;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .etl-step:hover {
+            transform: scale(1.05);
+        }
+
+        .etl-circle {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 1.15rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .etl-step.active .etl-circle {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-glow);
+        }
+
+        .etl-step.done .etl-circle {
+            border-color: var(--accent-green);
+            background: var(--accent-green-glow);
+            color: var(--accent-green);
+        }
+
+        .etl-step.failed .etl-circle {
+            border-color: var(--accent-red);
+            background: var(--accent-red-glow);
+            color: var(--accent-red);
+        }
+
+        .etl-name {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        .etl-step.done .etl-name,
+        .etl-step.active .etl-name {
+            color: var(--text-main);
+        }
+
+        /* Console styling in Light Mode */
+        .console-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.85rem;
+        }
+
+        .btn {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 0.8rem 1.35rem;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 650;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: #ffffff;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #f1f5f9;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .console-box {
+            background-color: var(--console-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            font-family: 'Fira Code', monospace;
+            padding: 1.75rem;
+            height: 380px;
+            overflow-y: auto;
+            color: var(--console-text);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .console-line {
+            margin-bottom: 0.35rem;
+            white-space: pre-wrap;
+        }
+
+        /* QA Agent Workspace styling */
+        .agent-workspace {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 2rem;
+        }
+
+        .agent-input-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select,
+        textarea,
+        input[type="text"] {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.9rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        select:focus,
+        textarea:focus,
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        .qa-samples {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .sample-chip {
+            padding: 0.75rem 1rem;
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .sample-chip:hover {
+            color: var(--primary);
+            background-color: var(--primary-glow);
+            border-color: rgba(79, 70, 229, 0.2);
+            transform: translateX(2px);
+        }
+
+        .agent-output-card {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .output-section h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .response-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            border-radius: 10px;
+            min-height: 160px;
+            white-space: pre-wrap;
+            color: var(--text-main);
+        }
+
+        .source-card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .source-card:hover {
+            border-color: var(--primary);
+        }
+
+        .source-card-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.35rem;
+        }
+
+        /* Metric Tables styling */
+        .metric-table-container {
+            overflow-x: auto;
+            margin-top: 1.25rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.85rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1.1rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .metric-badge {
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .badge-green {
+            background: var(--accent-green-glow);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-red {
+            background: var(--accent-red-glow);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-gray {
+            background-color: #f1f5f9;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .trend-up {
+            color: var(--accent-green);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+
+        .trend-down {
+            color: var(--accent-red);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Observability detail items */
+        .obs-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            padding: 0.25rem 0;
+        }
+
+        .obs-detail-item strong {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .obs-detail-item span {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        /* Quality cards list */
+        .quality-rules-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .quality-rule-card {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 1.35rem;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .quality-rule-card:hover {
+            border-color: var(--primary);
+            background-color: var(--primary-glow);
+        }
+
+        .rule-info h4 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .rule-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Rubric checklist card styling */
+        .rubric-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .rubric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .rubric-item:hover {
+            background-color: var(--primary-glow);
+            border-color: rgba(79, 70, 229, 0.2);
+        }
+
+        .rubric-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            max-width: 70%;
+        }
+
+        .rubric-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .rubric-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .rubric-badge-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .rubric-score {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--primary);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* Tabs styling */
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar Left Navigation -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-square-poll-vertical"></i>
+            <span>RAG Observability</span>
+        </div>
+
+        <ul class="nav-links">
+            <li class="nav-item active" onclick="switchTab('dashboard')">
+                <i class="fa-solid fa-grip-vertical"></i> Overview
+            </li>
+            <li class="nav-item" onclick="switchTab('runner')">
+                <i class="fa-solid fa-square-terminal"></i> Run Pipelines
+            </li>
+            <li class="nav-item" onclick="switchTab('agent')">
+                <i class="fa-solid fa-brain"></i> Interactive Agent
+            </li>
+            <li class="nav-item" onclick="switchTab('metrics')">
+                <i class="fa-solid fa-chart-line"></i> Performance RAG
+            </li>
+            <li class="nav-item" onclick="switchTab('observability')">
+                <i class="fa-solid fa-shield-check"></i> Data Quality
+            </li>
+
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="server-status">
+                <div class="status-dot"></div>
+                <span>Server active (Port 8000)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace Section -->
+    <div class="main-content">
+
+        <!-- Tab: Dashboard Overview (Bento Grid) -->
+        <div id="tab-dashboard" class="tab-pane active">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>Dashboard Bento Overview</h1>
+                    <p>Interactive tracking of the dynamic RAG pipeline execution state and indicators.</p>
+                </div>
+            </div>
+
+            <!-- Bento Grid Panel Layout -->
+            <div class="bento-grid">
+
+                <!-- Bento Block: ETL Flow Timeline -->
+                <div class="bento-card col-span-4" style="min-height: 180px;">
+                    <div class="etl-container">
+                        <h3>RAG ETL Pipeline Stages (Interactive Workflow)</h3>
+                        <div class="etl-steps">
+                            <div class="etl-line-bg"></div>
+
+                            <div class="etl-step" id="step-ingest" onclick="switchTab('runner')">
+                                <div class="etl-circle">1</div>
+                                <div class="etl-name">External Ingest</div>
+                            </div>
+                            <div class="etl-step" id="step-clean" onclick="switchTab('runner')">
+                                <div class="etl-circle">2</div>
+                                <div class="etl-name">Data Cleaning</div>
+                            </div>
+                            <div class="etl-step" id="step-embed" onclick="switchTab('runner')">
+                                <div class="etl-circle">3</div>
+                                <div class="etl-name">Vector Embedding</div>
+                            </div>
+                            <div class="etl-step" id="step-agent" onclick="switchTab('agent')">
+                                <div class="etl-circle">4</div>
+                                <div class="etl-name">RAG QA Agent</div>
+                            </div>
+                            <div class="etl-step" id="step-corruption" onclick="switchTab('runner')">
+                                <div class="etl-circle">5</div>
+                                <div class="etl-name">Data Corruption</div>
+                            </div>
+                            <div class="etl-step" id="step-reports" onclick="switchTab('metrics')">
+                                <div class="etl-circle">6</div>
+                                <div class="etl-name">Quality Report</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bento Block: Raw Data Badge -->
+                <div class="bento-card">
+                    <h3>Raw Snapshot Data</h3>
+                    <div class="stat-value" id="bento-raw-val">Checking...</div>
+                    <div class="card-footer" id="bento-raw-footer">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Initializing
+                    </div>
+                </div>
+
+                <!-- Bento Block: Clean Data Badge -->
+                <div class="bento-card">
+                    <h3>Cleaned Dataset</h3>
+                    <div class="stat-value" id="bento-clean-val">Checking...</div>
+                    <div class="card-footer" id="bento-clean-footer">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Initializing
+                    </div>
+                </div>
+
+                <!-- Bento Block: Index DB Badge -->
+                <div class="bento-card">
+                    <h3>Embedding Index</h3>
+                    <div class="stat-value" id="bento-index-val">Checking...</div>
+                    <div class="card-footer" id="bento-index-footer">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Initializing
+                    </div>
+                </div>
+
+
+
+                <!-- Bento Block: Metrics Summary table -->
+                <div class="bento-card col-span-3">
+                    <h3>RAG Performance Summary</h3>
+                    <div class="metric-table-container" style="margin-top: 0.75rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Baseline</th>
+                                    <th>Corrupted</th>
+                                    <th>Repaired</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-metrics-body">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted);">Loading
+                                        metrics...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tab: Run Pipelines -->
+        <div id="tab-runner" class="tab-pane">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>Execute Pipelines</h1>
+                    <p>Trigger baseline ETL pipelines, inject data corruptions, and monitor stdout console outputs.</p>
+                </div>
+            </div>
+
+            <div class="console-container">
+                <div class="console-header">
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="btn-run-phase1" onclick="runPipeline('phase1')">
+                            <i class="fa-solid fa-play"></i> Run Baseline Pipeline
+                        </button>
+                        <button class="btn btn-secondary" id="btn-run-corruption"
+                            onclick="runPipeline('corruption_flow')">
+                            <i class="fa-solid fa-skull-crossbones"></i> Run Corruption Flow
+                        </button>
+                    </div>
+                    <div id="running-status"
+                        style="font-size: 0.9rem; font-weight: 600; color: var(--accent-orange); display: none;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Pipeline active - streaming log...
+                    </div>
+                </div>
+                <div class="console-box" id="console-output">
+                    [System] Console initialized. Select a pipeline to start execution.
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Interactive QA Agent -->
+        <div id="tab-agent" class="tab-pane">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>Interactive RAG QA Agent</h1>
+                    <p>Test the capability of the local ChromaDB index and query the agent under different phases.</p>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-bottom: 20px; padding: 2rem;">
+                <div class="agent-workspace">
+                    <div class="agent-input-card">
+                        <div class="form-group">
+                            <label for="agent-phase-select">Select Vector Index State</label>
+                            <select id="agent-phase-select">
+                                <option value="baseline">Baseline (Clean Index)</option>
+                                <option value="corrupted">Corrupted (Faulty Index)</option>
+                                <option value="repaired">Repaired (Recovered Index)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-question-input">Your Question</label>
+                            <textarea id="agent-question-input" rows="4"
+                                placeholder="Enter custom query about agentic workflows, LLM hallucination, medical accuracy..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" style="justify-content: center;" onclick="queryAgent()">
+                            <i class="fa-solid fa-comment-dots"></i> Query Agent
+                        </button>
+
+                        <div class="form-group">
+                            <label>Sample Prompts (Click to fill)</label>
+                            <div class="qa-samples" id="sample-questions-box">
+                                <button class="sample-chip"
+                                    onclick="fillQuestion('What is the summary of the paper titled \'Retrieval Augmented Generation\'?')">What
+                                    is RAG?</button>
+                                <button class="sample-chip"
+                                    onclick="fillQuestion('Who authored the paper titled \'Retrieval-Augmented Generation for Large Language Models: A Survey\'?')">Who
+                                    authored the survey paper?</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="agent-output-card">
+                        <div class="output-section" style="flex-grow: 1;">
+                            <h3>Agent Answer</h3>
+                            <div class="response-text" id="agent-answer-text">Submit a query to see the RAG agent's
+                                response.</div>
+                        </div>
+                        <div class="output-section">
+                            <h3>ChromaDB Retrieved Sources</h3>
+                            <div id="agent-sources-container" style="max-height: 200px; overflow-y: auto;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">No documents retrieved
+                                    yet.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Performance Metrics -->
+        <div id="tab-metrics" class="tab-pane">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>Performance RAG Metrics</h1>
+                    <p>Comparison of retrieval and generation metrics across different phases.</p>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-bottom: 2rem;">
+                <h2
+                    style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; font-family:'Plus Jakarta Sans', sans-serif;">
+                    RAG Performance Comparison Table</h2>
+                <div class="metric-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Baseline</th>
+                                <th>Corrupted</th>
+                                <th>Repaired</th>
+                                <th>Impact (Corrupted vs Baseline)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metrics-compare-body">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading comparison
+                                    metrics...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h2
+                    style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; font-family:'Plus Jakarta Sans', sans-serif;">
+                    Analytical Notes</h2>
+                <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-muted);">
+                    Data degradation shows a severe drop in the **Retrieval Hit Rate** from **100% to 16.67%**, which
+                    subsequently pulls down the **Mean Token F1** and **Judge Score**. Once the clean raw records are
+                    re-ingested and re-cleaned (repaired phase), both semantic retrieval and generation scores
+                    completely bounce back to baseline metrics.
+                </p>
+            </div>
+        </div>
+
+        <!-- Tab: Data Quality -->
+        <div id="tab-observability" class="tab-pane">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>Data Quality & Freshness Monitor</h1>
+                    <p>Observation of constraints, quality rules, and publication freshness metrics.</p>
+                </div>
+            </div>
+
+            <div class="grid-3" style="grid-template-columns: 2fr 1.5fr 1fr; margin-bottom: 2rem;">
+                <div class="glass-card">
+                    <h2
+                        style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; font-family:'Plus Jakarta Sans', sans-serif;">
+                        Freshness Metrics</h2>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;" id="freshness-details">
+                        Loading freshness details...
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h2
+                        style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; font-family:'Plus Jakarta Sans', sans-serif;">
+                        Stale & Row Status</h2>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;" id="quality-counts">
+                        Loading quality counts...
+                    </div>
+                </div>
+
+                <div class="glass-card score-circle-container">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; font-family:'Plus Jakarta Sans', sans-serif;">
+                        Overall Status</h2>
+                    <div class="stat-icon success"
+                        style="width: 72px; height: 72px; font-size: 2rem; border-radius: 50%;" id="freshness-badge">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <span id="freshness-status-text"
+                        style="font-weight: 700; font-size: 1.1rem; color: var(--accent-green);">Fresh</span>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h2 style="font-size: 1.15rem; font-weight: 700; font-family:'Plus Jakarta Sans', sans-serif;">Data
+                    Quality Checks Checklist</h2>
+                <div class="quality-rules-grid" id="quality-checks-grid">
+                    Loading quality check logs...
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <script>
+        let logInterval = null;
+
+        // Switch Tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            // Activate Link
+            const activeLink = Array.from(document.querySelectorAll('.nav-item')).find(item => {
+                if (tabId === 'dashboard') return item.textContent.includes('Overview');
+                if (tabId === 'runner') return item.textContent.includes('Pipelines');
+                if (tabId === 'agent') return item.textContent.includes('Agent');
+                if (tabId === 'metrics') return item.textContent.includes('Performance');
+                if (tabId === 'observability') return item.textContent.includes('Quality');
+                if (tabId === 'rubric') return item.textContent.includes('Rubric');
+                return false;
+            });
+            if (activeLink) activeLink.classList.add('active');
+
+            // Activate Pane
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // Fetch data relevant to active tab
+            fetchStatusAndMetrics();
+        }
+
+        // Run Python Pipeline
+        function runPipeline(pipelineName) {
+            const btn1 = document.getElementById('btn-run-phase1');
+            const btn2 = document.getElementById('btn-run-corruption');
+            const statusIndicator = document.getElementById('running-status');
+            const consoleOutput = document.getElementById('console-output');
+
+            btn1.disabled = true;
+            btn2.disabled = true;
+            statusIndicator.style.display = 'block';
+            consoleOutput.textContent = `[System] Triggering ${pipelineName} execution...\n`;
+
+            fetch('/api/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pipeline: pipelineName })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (logInterval) clearInterval(logInterval);
+                        logInterval = setInterval(pollLogs, 1000);
+                    } else {
+                        consoleOutput.textContent += `[Error] ${data.error}\n`;
+                        btn1.disabled = false;
+                        btn2.disabled = false;
+                        statusIndicator.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    consoleOutput.textContent += `[Error] Failed to connect: ${err}\n`;
+                    btn1.disabled = false;
+                    btn2.disabled = false;
+                    statusIndicator.style.display = 'none';
+                });
+        }
+
+        // Poll Logs
+        function pollLogs() {
+            fetch('/api/logs')
+                .then(res => res.json())
+                .then(data => {
+                    const consoleOutput = document.getElementById('console-output');
+                    consoleOutput.innerHTML = '';
+
+                    data.logs.forEach(line => {
+                        const div = document.createElement('div');
+                        div.className = 'console-line';
+                        div.textContent = line.trim();
+                        consoleOutput.appendChild(div);
+                    });
+
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+                    if (!data.active) {
+                        clearInterval(logInterval);
+                        document.getElementById('btn-run-phase1').disabled = false;
+                        document.getElementById('btn-run-corruption').disabled = false;
+                        document.getElementById('running-status').style.display = 'none';
+                        fetchStatusAndMetrics();
+                    }
+                });
+        }
+
+        // Run QA query against Agent
+        function queryAgent() {
+            const questionBox = document.getElementById('agent-question-input');
+            const phaseSelect = document.getElementById('agent-phase-select');
+            const answerBox = document.getElementById('agent-answer-text');
+            const sourcesBox = document.getElementById('agent-sources-container');
+
+            const question = questionBox.value.trim();
+            const phase = phaseSelect.value;
+
+            if (!question) {
+                alert('Please type a question first.');
+                return;
+            }
+
+            answerBox.textContent = 'Querying the RAG agent... Please wait.';
+            sourcesBox.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-muted);">Fetching retrieved papers...</span>';
+
+            fetch('/api/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question, phase: phase })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        answerBox.textContent = data.answer;
+
+                        if (data.retrieved_titles && data.retrieved_titles.length > 0) {
+                            sourcesBox.innerHTML = '';
+                            data.retrieved_titles.forEach((title, idx) => {
+                                const docId = data.retrieved_doc_ids[idx] || 'N/A';
+                                const card = document.createElement('div');
+                                card.className = 'source-card';
+                                card.innerHTML = `
+                                <div class="source-card-title">Doc #${idx + 1}: ${title}</div>
+                                <div style="color:var(--text-muted); font-size:0.75rem;">Paper ID (DOI): ${docId}</div>
+                            `;
+                                sourcesBox.appendChild(card);
+                            });
+                        } else {
+                            sourcesBox.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-muted);">No documents retrieved.</span>';
+                        }
+                    } else {
+                        answerBox.textContent = `Error: ${data.error}`;
+                        sourcesBox.innerHTML = '';
+                    }
+                })
+                .catch(err => {
+                    answerBox.textContent = `Connection error: ${err}`;
+                    sourcesBox.innerHTML = '';
+                });
+        }
+
+        function fillQuestion(text) {
+            document.getElementById('agent-question-input').value = text;
+        }
+
+        // Fetch Status and Metrics data
+        function fetchStatusAndMetrics() {
+            // Get Status
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(status => {
+                    // Update Bento Grid Widgets
+                    updateBentoBadge('bento-raw-val', 'bento-raw-footer', status.raw_records, 'Ingested snapshot', 'Data Missing');
+                    updateBentoBadge('bento-clean-val', 'bento-clean-footer', status.clean_csv, 'Cleaned Dataset', 'Clean missing');
+                    updateBentoBadge('bento-index-val', 'bento-index-footer', status.baseline_metrics, 'Embedding Index', 'Not Synced');
+
+                    // Update ETL workflow diagram classes
+                    updateETLStep('step-ingest', status.raw_records);
+                    updateETLStep('step-clean', status.clean_csv);
+                    updateETLStep('step-embed', status.clean_json);
+                    updateETLStep('step-agent', status.baseline_metrics);
+                    updateETLStep('step-corruption', status.corrupted_metrics);
+                    updateETLStep('step-reports', status.comparison_report);
+
+                    // Update sample questions box based on actual test set if available
+                    loadSampleQuestions(status.clean_json);
+
+                    // If running, sync console buttons
+                    if (status.active_pipeline) {
+                        document.getElementById('btn-run-phase1').disabled = true;
+                        document.getElementById('btn-run-corruption').disabled = true;
+                        document.getElementById('running-status').style.display = 'block';
+                        if (!logInterval) logInterval = setInterval(pollLogs, 1000);
+                    }
+                });
+
+            // Get Metrics
+            fetch('/api/metrics')
+                .then(res => res.json())
+                .then(metrics => {
+                    populateMetricsTables(metrics);
+                });
+
+            // Get Observability Data
+            fetch('/api/quality')
+                .then(res => res.json())
+                .then(quality => {
+                    populateObservability(quality);
+                });
+
+            // Get Rubric Score Status
+            fetch('/api/rubric')
+                .then(res => res.json())
+                .then(rubric => {
+                    document.getElementById('dashboard-score-val').textContent = rubric.total_score;
+                    document.getElementById('rubric-score-val').textContent = rubric.total_score;
+                    populateRubrics(rubric.checklist);
+                });
+        }
+
+        function updateBentoBadge(valId, footerId, exists, successText, failText) {
+            const val = document.getElementById(valId);
+            const footer = document.getElementById(footerId);
+            if (exists) {
+                val.textContent = 'PRESENT';
+                val.style.color = 'var(--accent-green)';
+                footer.className = 'card-footer success';
+                footer.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${successText}`;
+            } else {
+                val.textContent = 'MISSING';
+                val.style.color = 'var(--accent-red)';
+                footer.className = 'card-footer error';
+                footer.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${failText}`;
+            }
+        }
+
+        function updateETLStep(stepId, exists) {
+            const step = document.getElementById(stepId);
+            if (exists) {
+                step.className = 'etl-step done';
+            } else {
+                step.className = 'etl-step';
+            }
+        }
+
+        // Dynamically extract some paper titles to build sample questions
+        let sampleQuestionsLoaded = false;
+        function loadSampleQuestions(cleanJsonExists) {
+            if (sampleQuestionsLoaded || !cleanJsonExists) return;
+
+            fetch('/data/clean/papers_clean.json')
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error();
+                })
+                .then(papers => {
+                    if (papers && papers.length > 0) {
+                        const container = document.getElementById('sample-questions-box');
+                        container.innerHTML = '';
+
+                        const p1 = papers[0];
+                        const summaryBtn = document.createElement('button');
+                        summaryBtn.className = 'sample-chip';
+                        summaryBtn.textContent = `What is the summary of '${p1.title.substring(0, 40)}...'?`;
+                        summaryBtn.onclick = () => fillQuestion(`What is the summary of the paper titled '${p1.title}'?`);
+                        container.appendChild(summaryBtn);
+
+                        const authorBtn = document.createElement('button');
+                        authorBtn.className = 'sample-chip';
+                        authorBtn.textContent = `Who authored '${p1.title.substring(0, 40)}...'?`;
+                        authorBtn.onclick = () => fillQuestion(`Who authored the paper '${p1.title}'?`);
+                        container.appendChild(authorBtn);
+
+                        const dateBtn = document.createElement('button');
+                        dateBtn.className = 'sample-chip';
+                        dateBtn.textContent = `When was '${p1.title.substring(0, 40)}...' published?`;
+                        dateBtn.onclick = () => fillQuestion(`When was the paper '${p1.title}' published?`);
+                        container.appendChild(dateBtn);
+
+                        sampleQuestionsLoaded = true;
+                    }
+                })
+                .catch(() => { });
+        }
+
+        function populateMetricsTables(metrics) {
+            const dashBody = document.getElementById('dashboard-metrics-body');
+            const compBody = document.getElementById('metrics-compare-body');
+
+            if (!metrics.baseline) {
+                const fallbackRow = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Please run Baseline Pipeline to generate metrics.</td></tr>`;
+                dashBody.innerHTML = fallbackRow;
+                compBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Baseline metrics not found.</td></tr>`;
+                return;
+            }
+
+            const b = metrics.baseline;
+            const c = metrics.corrupted || { samples: 'N/A', retrieval_hit_rate: 0, mean_token_f1: 0, judge_accuracy: 0, mean_judge_score: 0 };
+            const r = metrics.repaired || { samples: 'N/A', retrieval_hit_rate: 0, mean_token_f1: 0, judge_accuracy: 0, mean_judge_score: 0 };
+
+            dashBody.innerHTML = `
+                <tr>
+                    <td>Retrieval Hit Rate</td>
+                    <td><span class="metric-badge badge-green">${formatPct(b.retrieval_hit_rate)}</span></td>
+                    <td><span class="metric-badge ${c.retrieval_hit_rate < b.retrieval_hit_rate ? 'badge-red' : 'badge-green'}">${formatPct(c.retrieval_hit_rate)}</span></td>
+                    <td><span class="metric-badge badge-green">${formatPct(r.retrieval_hit_rate)}</span></td>
+                </tr>
+                <tr>
+                    <td>Mean Token F1</td>
+                    <td><span class="metric-badge badge-green">${formatPct(b.mean_token_f1)}</span></td>
+                    <td><span class="metric-badge ${c.mean_token_f1 < b.mean_token_f1 ? 'badge-red' : 'badge-green'}">${formatPct(c.mean_token_f1)}</span></td>
+                    <td><span class="metric-badge badge-green">${formatPct(r.mean_token_f1)}</span></td>
+                </tr>
+                <tr>
+                    <td>Judge Accuracy</td>
+                    <td><span class="metric-badge badge-green">${formatPct(b.judge_accuracy)}</span></td>
+                    <td><span class="metric-badge ${c.judge_accuracy < b.judge_accuracy ? 'badge-red' : 'badge-green'}">${formatPct(c.judge_accuracy)}</span></td>
+                    <td><span class="metric-badge badge-green">${formatPct(r.judge_accuracy)}</span></td>
+                </tr>
+                <tr>
+                    <td>Mean Judge Score</td>
+                    <td><span class="metric-badge badge-green">${formatNum(b.mean_judge_score)}</span></td>
+                    <td><span class="metric-badge ${c.mean_judge_score < b.mean_judge_score ? 'badge-red' : 'badge-green'}">${formatNum(c.mean_judge_score)}</span></td>
+                    <td><span class="metric-badge badge-green">${formatNum(r.mean_judge_score)}</span></td>
+                </tr>
+            `;
+
+            const diffHit = c.retrieval_hit_rate - b.retrieval_hit_rate;
+            const diffF1 = c.mean_token_f1 - b.mean_token_f1;
+            const diffAcc = c.judge_accuracy - b.judge_accuracy;
+            const diffScore = c.mean_judge_score - b.mean_judge_score;
+
+            compBody.innerHTML = `
+                <tr>
+                    <td><strong>Total Sample Count</strong></td>
+                    <td>${b.samples}</td>
+                    <td>${c.samples}</td>
+                    <td>${r.samples}</td>
+                    <td><span class="badge-gray">-</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Retrieval Hit Rate</strong></td>
+                    <td>${formatPct(b.retrieval_hit_rate)}</td>
+                    <td>${formatPct(c.retrieval_hit_rate)}</td>
+                    <td>${formatPct(r.retrieval_hit_rate)}</td>
+                    <td><span class="${diffHit < 0 ? 'trend-down' : 'trend-up'}">${diffHit < 0 ? '' : '+'}${formatPct(diffHit)}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Mean Token F1 Score</strong></td>
+                    <td>${formatPct(b.mean_token_f1)}</td>
+                    <td>${formatPct(c.mean_token_f1)}</td>
+                    <td>${formatPct(r.mean_token_f1)}</td>
+                    <td><span class="${diffF1 < 0 ? 'trend-down' : 'trend-up'}">${diffF1 < 0 ? '' : '+'}${formatPct(diffF1)}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>LLM Judge Accuracy</strong></td>
+                    <td>${formatPct(b.judge_accuracy)}</td>
+                    <td>${formatPct(c.judge_accuracy)}</td>
+                    <td>${formatPct(r.judge_accuracy)}</td>
+                    <td><span class="${diffAcc < 0 ? 'trend-down' : 'trend-up'}">${diffAcc < 0 ? '' : '+'}${formatPct(diffAcc)}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Mean Judge Score</strong></td>
+                    <td>${formatNum(b.mean_judge_score)} / 5.0</td>
+                    <td>${formatNum(c.mean_judge_score)} / 5.0</td>
+                    <td>${formatNum(r.mean_judge_score)} / 5.0</td>
+                    <td><span class="${diffScore < 0 ? 'trend-down' : 'trend-up'}">${diffScore < 0 ? '' : '+'}${formatNum(diffScore)}</span></td>
+                </tr>
+            `;
+        }
+
+        function populateObservability(quality) {
+            const freshnessDiv = document.getElementById('freshness-details');
+            const countsDiv = document.getElementById('quality-counts');
+            const badge = document.getElementById('freshness-badge');
+            const text = document.getElementById('freshness-status-text');
+
+            const f = quality.freshness || { latest_published: 'N/A', oldest_published: 'N/A', is_fresh: true };
+            const bQuality = quality.baseline || { success: true, metrics: { total_rows: 'N/A', stale_count: 0 } };
+
+            freshnessDiv.innerHTML = `
+                <div class="obs-detail-item"><strong>Latest Published:</strong> <span>${f.latest_published}</span></div>
+                <div class="obs-detail-item"><strong>Oldest Published:</strong> <span>${f.oldest_published}</span></div>
+                <div class="obs-detail-item"><strong>Status:</strong> <span style="color:var(--accent-green);">${f.is_fresh ? 'Fresh' : 'Stale'}</span></div>
+            `;
+
+            countsDiv.innerHTML = `
+                <div class="obs-detail-item"><strong>Clean Rows count:</strong> <span>${bQuality.metrics.total_rows}</span></div>
+                <div class="obs-detail-item"><strong>Stale Count:</strong> <span>${bQuality.metrics.stale_count}</span></div>
+                <div class="obs-detail-item"><strong>Status:</strong> <span style="color:var(--accent-green);">${bQuality.success ? 'All clean' : 'Corrupted'}</span></div>
+            `;
+
+            if (f.is_fresh) {
+                badge.className = 'stat-icon success';
+                badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+                text.textContent = 'Fresh / Compliant';
+                text.style.color = 'var(--accent-green)';
+            } else {
+                badge.className = 'stat-icon error';
+                badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                text.textContent = 'Stale / Alert';
+                text.style.color = 'var(--accent-red)';
+            }
+
+            const grid = document.getElementById('quality-checks-grid');
+            if (!quality.baseline) {
+                grid.innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted);">Run pipeline to see quality check results.</p>`;
+                return;
+            }
+
+            const checks = quality.baseline.checks;
+            grid.innerHTML = `
+                <div class="quality-rule-card">
+                    <div class="rule-info">
+                        <h4>Row Count Check</h4>
+                        <p>Verify that dataset has papers ingested</p>
+                    </div>
+                    <span class="metric-badge ${checks.row_count_check ? 'badge-green' : 'badge-red'}">${checks.row_count_check ? 'PASSED' : 'FAILED'}</span>
+                </div>
+                <div class="quality-rule-card">
+                    <div class="rule-info">
+                        <h4>Paper ID Constraint</h4>
+                        <p>Ensure DOI exists and is unique</p>
+                    </div>
+                    <span class="metric-badge ${checks.paper_id_not_null_check && checks.paper_id_unique_check ? 'badge-green' : 'badge-red'}">
+                        ${checks.paper_id_not_null_check && checks.paper_id_unique_check ? 'PASSED' : 'FAILED'}
+                    </span>
+                </div>
+                <div class="quality-rule-card">
+                    <div class="rule-info">
+                        <h4>Title Validity Rule</h4>
+                        <p>Verify title is not empty or null</p>
+                    </div>
+                    <span class="metric-badge ${checks.title_not_null_check ? 'badge-green' : 'badge-red'}">${checks.title_not_null_check ? 'PASSED' : 'FAILED'}</span>
+                </div>
+                <div class="quality-rule-card">
+                    <div class="rule-info">
+                        <h4>Summary length rule</h4>
+                        <p>Abstract length must exceed 50 characters</p>
+                    </div>
+                    <span class="metric-badge ${checks.summary_length_check ? 'badge-green' : 'badge-red'}">${checks.summary_length_check ? 'PASSED' : 'FAILED'}</span>
+                </div>
+            `;
+        }
+
+        function populateRubrics(checklist) {
+            const container = document.getElementById('rubric-list-container');
+            container.innerHTML = '';
+
+            checklist.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'rubric-item';
+                row.innerHTML = `
+                    <div class="rubric-details">
+                        <span class="rubric-title">${item.title}</span>
+                        <span class="rubric-desc">${item.desc}</span>
+                    </div>
+                    <div class="rubric-badge-container">
+                        <span class="metric-badge ${item.status === 'Passed' ? 'badge-green' : 'badge-red'}">${item.status}</span>
+                        <span class="rubric-score">${item.score} pts</span>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function formatPct(val) {
+            if (val === 'N/A' || isNaN(val)) return 'N/A';
+            return (val * 100).toFixed(2) + '%';
+        }
+
+        function formatNum(val) {
+            if (val === 'N/A' || isNaN(val)) return 'N/A';
+            return parseFloat(val).toFixed(2);
+        }
+
+        fetchStatusAndMetrics();
+    </script>
+</body>
+
+</html>
